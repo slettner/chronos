@@ -326,14 +326,13 @@ class LSTnet(object):
         if mode == tf.estimator.ModeKeys.EVAL:
             """ Eval metrics """
             eval_metrics = {
-                "rmse":
+                "rmse": rmse(labels=labels, predictions=logits),
+                "corr": corr(labels=labels, predictions=logits)
             }
 
-
-
-
-
-
-
-
-
+        return tf.estimator.EstimatorSpec(
+            mode=mode,
+            loss=loss,
+            train_op=train_op,
+            eval_metric_ops=eval_metrics
+        )
