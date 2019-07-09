@@ -4,7 +4,10 @@ import tensorflow as tf
 from tensorflow.python.framework import ops
 
 
-def correlation(
+__all__ = ['corr', 'rmse']
+
+
+def corr(
         labels,
         predictions,
         weights=None,
@@ -48,3 +51,7 @@ def correlation(
         ops.add_to_collections(updates_collections, )
 
     return wrapped_correlation_metric, update_op
+
+
+rmse = tf.metrics.root_mean_squared_error
+
