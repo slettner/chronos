@@ -7,6 +7,7 @@ import tensorflow as tf
 import functools
 import multiprocessing as mp
 
+
 class MODE:
     TRAIN = 0
     EVAL = 1
@@ -55,21 +56,35 @@ class AbstractInputGenerator(metaclass=abc.ABCMeta):
         self.mode = mode
         self.batch_size = batch_size
 
+    @abc.abstractmethod
+    def __len__(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def __getitem__(self, slice):
+        raise NotImplementedError
+
     @property
     @abc.abstractmethod
-    def num_train_sample(self):
+    def num_time_series(self):
+        """ The number of time series variable """
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def train_range(self):
         """ The amount of training samples """
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def num_validation_samples(self):
+    def validation_range(self):
         """ The amount of eval samples """
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def num_test_samples(self):
+    def test_range(self):
         """ The amount of test samples """
         raise NotImplementedError
 
@@ -86,7 +101,7 @@ class AbstractInputGenerator(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
-    def __call__(self, mode):
+    def __call__(self, mode, epochs=None):
         """
 
         Args:
@@ -95,7 +110,7 @@ class AbstractInputGenerator(metaclass=abc.ABCMeta):
         """
         # return the input function with the correct mode.
         # Return value is a function with signature
-        return functools.partial(self._input_fn, mode=mode)
+        return functools.partial(self._input_fn, mode=mode, epochs=epochs)
 
 
 @gin.configurable
@@ -106,7 +121,7 @@ class NumpyInputGenerator(AbstractInputGenerator):
     """
 
     def __init__(self, data, train, validation, batch_size,
-                 window, horizon, normalize=True, num_threads=mp.cpu_count()):
+                 window, horizon, normalize=True):
         """
 
         Args:
@@ -117,7 +132,6 @@ class NumpyInputGenerator(AbstractInputGenerator):
             validation(float): Between 0 and 1.Percentage of the validation set.
             normalize(bool): Noramlize. (per feature)
             batch_size(int): The batch size for training.
-            num_threads(int): The number of threads to use for reading data
         """
         super(NumpyInputGenerator, self).__init__(
             window=window,
@@ -128,8 +142,7 @@ class NumpyInputGenerator(AbstractInputGenerator):
             batch_size=batch_size
         )
         assert len(data.shape) == 2, "The data should have shape time x feature"
-        self.num_threads = num_threads
-        self.data = data
+        self.data = data.astype(np.float32)
         self.num_samples, self.feature_dim = self.data.shape
         tf.logging.info("Received data with {} values and {} time series values".format(
             self.num_samples, self.feature_dim
@@ -191,19 +204,19 @@ class NumpyInputGenerator(AbstractInputGenerator):
             X[i, :, :] = self.data[start:end, :]
             Y[i, :] = self.data[idx_range[i], :]
 
-        return X, Y
+        return X.astype(np.float32), Y.astype(np.float32)
 
-    def _input_fn(self, mode):
+    def _input_fn(self, mode, epochs=None):
         """ Implement the input function for the tf.estimator api """
 
         if mode == MODE.TRAIN:
             input_fn = tf.estimator.inputs.numpy_input_fn(
                 x=self.train_data[0],
                 y=self.train_data[1],
-                batch_size=self.batch_size,
-                num_epochs=None,
+                batch_size=self.batch_size if epochs is None else 1,
+                num_epochs=epochs,
                 shuffle=False,
-                num_threads=self.num_thread
+                num_threads=1
             )
             return input_fn()
 
@@ -211,10 +224,10 @@ class NumpyInputGenerator(AbstractInputGenerator):
             input_fn = tf.estimator.inputs.numpy_input_fn(
                 x=self.validation_data[0],
                 y=self.validation_data[1],
-                batch_size=self.num_validation_samples,
-                num_epochs=1,
+                batch_size=len(self.validation_range) if epochs is None else 1,
+                num_epochs=epochs,
                 shuffle=False,
-                num_threads=self.num_thread
+                num_threads=1
             )
             return input_fn()
 
@@ -222,21 +235,31 @@ class NumpyInputGenerator(AbstractInputGenerator):
             input_fn = tf.estimator.inputs.numpy_input_fn(
                 x=self.test_data[0],
                 y=self.test_data[1],
-                batch_size=self.num_test_smaples,
-                num_epochs=1,
+                batch_size=len(self.test_range) if epochs is None else 1,
+                num_epochs=epochs,
                 shuffle=False,
-                num_threads=self.num_thread
+                num_threads=1
             )
             return input_fn()
 
     @property
-    def num_train_sample(self):
-        return self.train_data[0].shape[0]
+    def train_range(self):
+        return range(self.window - self.horizon + 1, int(self.train * self.num_samples))
 
     @property
-    def num_validation_samples(self):
-        return self.validation_data[0].shape[0]
+    def validation_range(self):
+        return range(int(self.train * self.num_samples), int((self.train + self.validation) * self.num_samples))
 
     @property
-    def num_test_samples(self):
-        return self.test_data[0].shape[0]
+    def test_range(self):
+        return range(int((self.train + self.validation) * self.num_samples), self.num_samples)
+
+    @property
+    def num_time_series(self):
+        return self.feature_dim
+
+    def __getitem__(self, slice):
+        return self.data[slice]
+
+    def __len__(self):
+        return self.num_samples

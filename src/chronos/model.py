@@ -82,7 +82,7 @@ class LSTnet(object):
                                                         "one of 'SDG', 'RMSProb', 'Adam'".format(optimizer)
         self.optimizer = optimizer
         self.weight_regularization = weight_regularization
-        self.clip_gradient = clip_gradients
+        self.clip_gradients = clip_gradients
 
     def _convolutional_decoder(self, inputs, mode):
         """
@@ -110,7 +110,7 @@ class LSTnet(object):
         outputs = tf.keras.layers.Conv2D(
             filters=self.cnn_filters,
             kernel_size=(self.cnn_kernel_size, outputs.get_shape().as_list()[2]),
-            data_format="channel_last",
+            data_format="channels_last",
             kernel_initializer=self.cnn_kernel_init,
             activation=tf.nn.relu  # from paper
         )(outputs)
@@ -127,7 +127,8 @@ class LSTnet(object):
         # We put the additional zeros to the beginning of the time axis
         outputs = tf.concat(
             [
-                tf.zeros(shape=[input_shape[0], self.window - self.cnn_kernel_size + 1, input_shape[1]]),
+                tf.zeros(shape=[input_shape[0], self.cnn_kernel_size - 1, self.cnn_filters],
+                         dtype=tf.float32),
                 outputs
             ],
             axis=1
@@ -170,7 +171,7 @@ class LSTnet(object):
         output = tf.transpose(output, [0, 2, 1, 3])
 
         # merge the batch axis and the skip axis
-        output = tf.reshape(output, [input_shape[0]*num_slots, self.skip, input_shape[2]])
+        output = tf.reshape(output, [input_shape[0]*self.skip, num_slots, input_shape[2]])
 
         return output
 
@@ -245,6 +246,11 @@ class LSTnet(object):
 
         initial_input_shape = inputs.get_shape().as_list()
 
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            # Set the batch size manually as it is somehow not set by the numpy input func
+            inputs = tf.reshape(inputs, [1, initial_input_shape[1], initial_input_shape[2]])
+            initial_input_shape[0] = 1
+
         # inputs is of shape batch_size x window x time_series_vars
         if self.cnn_filters > 0 and self.cnn_kernel_size > 0:
             # inputs is of shape batch_size x window x self.cnn_filters
@@ -294,7 +300,7 @@ class LSTnet(object):
                 predictions=predictions
             )
 
-        loss = tf.keras.losses.mse(y_true=labels, y_pred=logits)
+        loss = tf.reduce_mean(tf.keras.losses.mae(y_true=labels, y_pred=logits), axis=0)
 
         if self.weight_regularization > 0:
             loss += self.weight_regularization * tf.add_n(
@@ -320,7 +326,7 @@ class LSTnet(object):
 
                 grads_and_vars = [(tf.clip_by_norm(grad, self.clip_gradients), var) for grad, var in grads_and_vars]
 
-                train_op = optimizer.apply_gradients(grads_and_vars)
+                train_op = optimizer.apply_gradients(grads_and_vars, global_step=tf.train.get_global_step())
 
         eval_metrics = None
         if mode == tf.estimator.ModeKeys.EVAL:

@@ -1,0 +1,77 @@
+# Default Config
+
+##########
+# Macros #
+##########
+
+window = 24
+horizon = 12
+num_time_series = 862
+
+
+#########
+# Input #
+#########
+
+chronos.data.from_txt.path = "data/traffic-subset.txt"
+chronos.data.NumpyInputGenerator.data = @chronos.data.from_txt()
+chronos.data.NumpyInputGenerator.train = 0.7
+chronos.data.NumpyInputGenerator.validation = 0.2
+chronos.data.NumpyInputGenerator.batch_size = 3
+chronos.data.NumpyInputGenerator.window = %window
+chronos.data.NumpyInputGenerator.horizon = %horizon
+
+
+##########
+# LSTnet #
+##########
+
+chronos.model.LSTnet.skip = 12
+chronos.model.LSTnet.highway = 12
+chronos.model.LSTnet.window = %window
+chronos.model.LSTnet.num_time_series = %num_time_series
+chronos.model.LSTnet.cnn_filters = 100
+chronos.model.LSTnet.cnn_kernel_size = 6
+chronos.model.LSTnet.cnn_dropout = 0.2
+chronos.model.LSTnet.cnn_batch_normalization = False
+chronos.model.LSTnet.gru_units = 100
+chronos.model.LSTnet.skip_gru_units = 5
+chronos.model.LSTnet.learning_rate = 0.001
+chronos.model.LSTnet.optimizer = "Adam"
+chronos.model.LSTnet.weight_regularization = 0.0001
+chronos.model.LSTnet.clip_gradients = 10
+
+
+#########
+# Plots #
+#########
+
+chronos.plots.auto_correlation_plot.number_of_series = %num_time_series
+chronos.plots.auto_correlation_plot.start = 0
+chronos.plots.auto_correlation_plot.end = 200
+chronos.plots.auto_correlation_plot.save_plot = "data"
+
+chronos.plots.plot_prediction.start_plot = 0
+chronos.plots.plot_prediction.end_plot = 200
+chronos.plots.plot_prediction.series = 0
+chronos.plots.plot_prediction.save_plot = "data"
+chronos.plots.plot_prediction.plot_show = True
+
+
+########
+# Main #
+########
+
+serving_input_receiver_fn.window = %window
+serving_input_receiver_fn.num_time_series = %num_time_series
+
+Chronos.input_generator = @chronos.data.NumpyInputGenerator()
+Chronos.model_dir = "data/model"
+Chronos.train_steps = 10
+Chronos.steps_per_eval = 1000
+Chronos.eval_test_set = False
+Chronos.export = False
+Chronos.plot = True
+
+
+

@@ -42,7 +42,7 @@ def corr(
     num = tf.reduce_mean(num1 * num2, axis=0)
     den = tf.keras.backend.std(labels, axis=0) * tf.keras.backend.std(predictions, axis=0)
 
-    wrapped_correlation_metric, update_op = tf.metrics.mean(num/den)
+    wrapped_correlation_metric, update_op = tf.metrics.mean(num/(den+1e-8))
 
     if metrics_collections:
         ops.add_to_collections(metrics_collections, wrapped_correlation_metric)
