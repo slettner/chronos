@@ -1,0 +1,12 @@
+version: '2.3'
+
+services:
+  chronos:
+    image: ga63fiy/chronos:0.0.1
+    network_mode: host
+    entrypoint:
+      - python
+      - src/chronos/client.py
+    command:
+      - --config
+      - /data
