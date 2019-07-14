@@ -12,7 +12,7 @@ import os
 import numpy as np
 from chronos.data import MODE
 from chronos.model import LSTnet
-from chronos.plots import plot_prediction
+from chronos.plots import plot_prediction, plt
 
 
 FLAGS = flags.FLAGS
@@ -41,7 +41,7 @@ class Chronos(object):
     """ End-to-End learning manager """
 
     def __init__(self, input_generator, model_dir, train_steps, steps_per_eval,
-                 eval_test_set=False, export=False, plot=False):
+                 eval_test_set=False, export=False, plot=False, plot_series=None):
         """
 
         Args:
@@ -51,7 +51,8 @@ class Chronos(object):
             steps_per_eval(int): Periodicity of evaluating counted in train steps.
             eval_test_set(bool): Check Test Set Performance
             export(bool): Export to model
-            plot(bool)
+            plot(bool): Plot the prediction over training validation and test
+            plot_series(list): List of time series vars to plot
         """
         self.input_generator = input_generator
         self.model_dir = model_dir
@@ -60,6 +61,13 @@ class Chronos(object):
         self.eval_test_set = eval_test_set
         self.export = export
         self.plot = plot
+        self.plot_series = plot_series
+        if self.plot_series is None:
+            self.plot_series = [0]
+
+        self.step = []
+        self.eval_score_rmse = []
+        self.eval_score_corr = []
 
     def run(self):
         """ Execute the train eval loop """
@@ -70,7 +78,7 @@ class Chronos(object):
         else:
             current_step = int(os.path.basename(current_step.model_checkpoint_path).split('-')[1])
 
-        steps_per_epoch = len(self.input_generator) // self.input_generator.batch_size
+        steps_per_epoch = int(len(self.input_generator) // self.input_generator.batch_size)
         tf.logging.info(
             'Training for %d steps (%.2f epochs in total). Current step %d.',
             self.train_steps,
@@ -89,7 +97,7 @@ class Chronos(object):
             model_fn=lst_net.model_fn,
             model_dir=self.model_dir
         )
-
+        eval_results = None
         while current_step < self.train_steps:
             # Train for up to steps_per_eval number of steps.
             # At the end of training, a checkpoint will be written to --model_dir.
@@ -107,6 +115,9 @@ class Chronos(object):
             # consistent, the evaluated images are also consistent.
             tf.logging.info('Starting to evaluate.')
             eval_results = estimator.evaluate(input_fn=eval_input_fn, steps=1)
+            self.step.append(current_step)
+            self.eval_score_corr.append(eval_results["corr"])
+            self.eval_score_rmse.append(eval_results["rmse"])
             tf.logging.info('Eval results at step %d: %s', next_checkpoint, eval_results)
 
             elapsed_time = int(time.time() - start_time_stamp)
@@ -135,20 +146,35 @@ class Chronos(object):
             val_predict = np.concatenate([np.expand_dims(x['prediction'], axis=0) for x in val_predict], axis=0)
             test_predict = np.concatenate([np.expand_dims(x['prediction'], axis=0) for x in test_predict], axis=0)
 
-            # TODO: WHY?
-            train_predict = np.concatenate(
-                [train_predict, np.zeros((self.input_generator.window-2, self.input_generator.num_time_series))],
-                axis=0
-            )
-
             plot_prediction(
                 data=self.input_generator,
                 train_predict=train_predict,
                 validation_predict=val_predict,
-                test_predict=test_predict
+                test_predict=test_predict,
+                save_plot=self.model_dir,
+                start_plot=0,
+                end_plot=len(self.input_generator),
+                series=self.plot_series
             )
+            self.make_metric_plots()
 
+            return eval_results
 
+    def make_metric_plots(self):
+        """ Plot the correlation and rmse metric over time """
+        plt.subplots(1)
+        plt.plot(self.step, self.eval_score_rmse)
+        plt.xlabel("Train Steps")
+        plt.ylabel("RMSE")
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.model_dir, "rmse.pdf"))
+
+        plt.subplots(1)
+        plt.plot(self.step, self.eval_score_corr)
+        plt.xlabel("Train Steps")
+        plt.ylabel("CORR")
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.model_dir, "corr.pdf"))
 
 
 def main(unused_argv):

@@ -4,8 +4,8 @@
 # Macros #
 ##########
 
-window = 24
-horizon = 12
+window = {{window}}  
+horizon = {{horizon}}
 num_time_series = 862
 
 
