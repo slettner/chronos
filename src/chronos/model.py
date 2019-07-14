@@ -14,7 +14,7 @@ class LSTnet(object):
                  num_time_series,
                  cnn_filters,
                  cnn_kernel_size,
-                 cnn_kernel_init=tf.compat.v1.variance_scaling_initializer,
+                 cnn_kernel_init=tf.variance_scaling_initializer,
                  cnn_dropout=0.2,
                  cnn_batch_normalization=False,
                  gru_units=100,
@@ -119,7 +119,7 @@ class LSTnet(object):
 
         training = bool(mode == tf.estimator.ModeKeys.TRAIN)
         if self.cnn_batch_normalization:
-            outputs = tf.keras.layers.BatchNormalization(axis=3)(outputs, training=training)
+            outputs = tf.keras.layers.BatchNormalization(axis=2)(outputs, training=training)
         outputs = tf.keras.layers.Dropout(rate=self.cnn_dropout)(outputs, training=training)
 
         # since we use padding = 'valid' we might lose some time slots.

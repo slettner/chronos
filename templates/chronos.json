@@ -1,0 +1,56 @@
+{
+  "study_name": "chronos",
+  "algorithm": "BayesianOptimization",
+  "study_dir": "experiments_data/traffic",
+  "fixed-parameter-config": {
+    "window": 24,
+    "horizon": 3,
+    "num_time_series": 862,
+    "skip":12,
+    "highway": 12,
+    "template_file": "template-numpy-input.gin",
+    "data_path": "data/traffic/traffic-subset.txt",
+    "steps_per_eval": 30,
+    "train_steps": 100,
+    "plot_series": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  },
+  "hyper-parameter-config": {
+    "goal": "MINIMIZE",
+    "maxTrials": 100,
+    "maxParallelTrials": 1,
+    "randomInitTrials": 10,
+    "params": [
+      {
+        "parameterName": "cnn_drop_out",
+        "type": "DOUBLE",
+        "minValue": 0.0,
+        "maxValue": 0.5,
+        "scalingType": "LINEAR"
+      },
+      {
+        "parameterName": "cnn_batch_normalization",
+        "type": "CATEGORICAL",
+        "feasiblePoints": "0, 1",
+        "scalingType": "LINEAR"
+      },
+      {
+        "parameterName": "gru_units",
+        "type": "CATEGORICAL",
+        "feasiblePoints": "50, 100, 200, 400",
+        "scalingType": "LINEAR"
+      },
+      {
+        "parameterName": "skip_gru_units",
+        "type": "CATEGORICAL",
+        "feasiblePoints": "5, 10, 20, 40",
+        "scalingType": "LINEAR"
+      },
+      {
+        "parameterName": "learning_rate",
+        "type": "DOUBLE",
+        "minValue": 0.01,
+        "maxValue": 0.0001
+      }
+    ]
+  }
+}

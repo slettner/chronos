@@ -1,1 +1,0 @@
-FROM tensorflow/tensorflow:1.12.3-py3

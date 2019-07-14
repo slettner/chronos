@@ -2,3 +2,5 @@ tensorflow
 numpy
 matplotlib
 pandas
+jinja2
+gin-config

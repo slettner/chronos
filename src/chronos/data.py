@@ -32,7 +32,7 @@ def from_txt(path, delimiter=','):
 class AbstractInputGenerator(metaclass=abc.ABCMeta):
     """ Interface for input generators for the tensorflow estimator api. """
 
-    def __init__(self, train, validation, batch_size, window, horizon, normalize, mode=MODE.TRAIN):
+    def __init__(self, train, validation, batch_size, window, horizon, normalize):
         """
         Abstract Class
 
@@ -53,7 +53,6 @@ class AbstractInputGenerator(metaclass=abc.ABCMeta):
         self.window = window
         self.horizon = horizon
         self.normalize = normalize
-        self.mode = mode
         self.batch_size = batch_size
 
     @abc.abstractmethod
@@ -244,7 +243,7 @@ class NumpyInputGenerator(AbstractInputGenerator):
 
     @property
     def train_range(self):
-        return range(self.window - self.horizon + 1, int(self.train * self.num_samples))
+        return range(self.window + self.horizon - 1, int(self.train * self.num_samples))
 
     @property
     def validation_range(self):

@@ -1,5 +1,6 @@
 led / optimized / DLL files
 /data
+/experiments_data
 __pycache__/
 *.py[cod]
 *$py.class

@@ -1,4 +1,4 @@
-# Implemets main loop chronos
+# Implements main loop chronos
 
 from __future__ import absolute_import
 from __future__ import division
@@ -13,14 +13,6 @@ import numpy as np
 from chronos.data import MODE
 from chronos.model import LSTnet
 from chronos.plots import plot_prediction, plt
-
-
-FLAGS = flags.FLAGS
-flags.DEFINE_string(
-    name="config",
-    default=None,
-    help="Path to the (.gin) configuration file"
-)
 
 
 @gin.configurable
@@ -177,15 +169,15 @@ class Chronos(object):
         plt.savefig(os.path.join(self.model_dir, "corr.pdf"))
 
 
-def main(unused_argv):
-
-    tf.logging.set_verbosity(tf.logging.INFO)
-    gin.parse_config_file(FLAGS.config)
-
-    chronos = Chronos()  # params set by gin
-    chronos.run()
-
-
-if __name__ == '__main__':
-    app.run(main)
+# def main(unused_argv):
+#
+#     tf.logging.set_verbosity(tf.logging.INFO)
+#     gin.parse_config_file(FLAGS.config)
+#
+#     chronos = Chronos()  # params set by gin
+#     chronos.run()
+#
+#
+# if __name__ == '__main__':
+#     app.run(main)
 
