@@ -126,13 +126,18 @@ class Chronos(object):
             )
 
         if self.plot:
+            tf.logging.info("Making Plots..")
+
             train_input_fn_predict = self.input_generator(mode=MODE.TRAIN, epochs=1)
             val_input_fn_predict = self.input_generator(mode=MODE.EVAL, epochs=1)
             test_input_fn_predict = self.input_generator(mode=MODE.TEST, epochs=1)
 
             train_predict = list(estimator.predict(input_fn=train_input_fn_predict))
+            tf.logging.info("Predicted Train Set.")
             val_predict = list(estimator.predict(input_fn=val_input_fn_predict))
+            tf.logging.info("Predicted Validation Set.")
             test_predict = list(estimator.predict(input_fn=test_input_fn_predict))
+            tf.logging.info("Predicted Test Set.")
 
             train_predict = np.concatenate([np.expand_dims(x['prediction'], axis=0) for x in train_predict], axis=0)
             val_predict = np.concatenate([np.expand_dims(x['prediction'], axis=0) for x in val_predict], axis=0)
