@@ -4,8 +4,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from absl import app, flags
 import time
+import h5py
 import gin
 import tensorflow as tf
 import os
@@ -126,6 +126,7 @@ class Chronos(object):
             )
 
         if self.plot:
+            start = time.time()
             tf.logging.info("Making Plots..")
 
             train_input_fn_predict = self.input_generator(mode=MODE.TRAIN, epochs=1)
@@ -143,6 +144,12 @@ class Chronos(object):
             val_predict = np.concatenate([np.expand_dims(x['prediction'], axis=0) for x in val_predict], axis=0)
             test_predict = np.concatenate([np.expand_dims(x['prediction'], axis=0) for x in test_predict], axis=0)
 
+            file = h5py.File("predictions.h5", "w")
+            file["train"] = train_predict
+            file["validation"] = val_predict
+            file["test"] = test_predict
+            file.close()
+
             plot_prediction(
                 data=self.input_generator,
                 train_predict=train_predict,
@@ -153,9 +160,10 @@ class Chronos(object):
                 end_plot=len(self.input_generator),
                 series=self.plot_series
             )
-            self.make_metric_plots()
+            tf.logging.info("Prediction and Plotting took {}".format(time.time()-start))
+        self.make_metric_plots()
 
-            return eval_results
+        return eval_results
 
     def make_metric_plots(self):
         """ Plot the correlation and rmse metric over time """

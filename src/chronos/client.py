@@ -66,16 +66,15 @@ def main(unused_argv):
 
         merged_config = {**fixed_parameter_config, **parameter_value_dict}
 
-        if os.path.isdir(os.path.join(exp_dir, study_name, "trial_{}".format(i))):
-            raise RuntimeError("Trial Exists")
-        else:
-            os.mkdir(os.path.join(exp_dir, study_name, "trial_{}").format(i))
+        while os.path.isdir(os.path.join(exp_dir, study_name, "trial_{}".format(i))):
+            i += 1
+        os.mkdir(os.path.join(exp_dir, study_name, "trial_{}").format(i))
         merged_config["model_dir"] = os.path.join(exp_dir, study_name, "trial_{}".format(i))
         manager = Manager(**merged_config)
         ret = manager.run()
-        # corr_score = ret["corr"]
+        corr_score = ret["corr"]
         rmse_score = ret["rmse"]
-        metric = rmse_score
+        metric = rmse_score + (1-corr_score)
         trial = client.complete_trial_with_one_metric(trial, metric)
         print(trial)
 
